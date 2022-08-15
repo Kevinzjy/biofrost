@@ -1,4 +1,4 @@
-.PHONY: help all install test clean doc uninstall
+.PHONY: help all install test clean doc uninstall wheel deploy deploy_test
 
 all: install test
 
@@ -29,3 +29,17 @@ doc:
 
 uninstall:
 	pip uninstall biofrost
+
+wheel:
+	make clean
+	pip install wheel setuptools
+	pip install twine
+	python setup.py sdist bdist_wheel
+
+deploy_test:
+	twine check dist/*
+	twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+
+deploy:
+	twine check dist/*
+	twine upload dist/*
