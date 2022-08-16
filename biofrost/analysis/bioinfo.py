@@ -10,77 +10,6 @@ from biofrost.utils import to_str
 
 
 
-Attr_tscp_id = re.compile(r'transcript_id "(\S+)";')
-Attr_gene_id = re.compile(r'gene_id "(\S+)";')
-
-
-class GTFParser(object):
-
-    def __init__(self, content):
-        self.contig = content[0]
-        self.source = content[1]
-        self.type = content[2]
-        self.start, self.end = int(content[3]), int(content[4])
-        self.strand = content[6]
-        self.attr_string = content[8]
-
-    @property
-    def attr(self):
-        """Parsing attribute column in gtf file"""
-        import re
-        field = {}
-        for attr_values in [re.split(r'\s+', i.strip()) for i in self.attr_string.split(';')[:-1]]:
-            key, value = attr_values[0], attr_values[1:]
-            field[key] = ' '.join(value).strip('"')
-        return field
-
-    @property
-    def transcript_id(self):
-        match = re.findall(Attr_tscp_id, self.attr_string)
-        return match[0] if match else None
-
-    @property
-    def gene_id(self):
-        match = re.findall(Attr_gene_id, self.attr_string)
-        return match[0] if match else None
-
-    def __repr__(self):
-        return '{} {}:{}-{}:{}'.format(self.type, self.contig, self.start, self.end, self.strand)
-
-    def seq(self, fasta):
-        tmp_seq = fasta.seq(self.contig, self.start-1, self.end)
-        if self.strand == '+':
-            return tmp_seq
-        else:
-            return revcomp(tmp_seq)
-
-
-class GFFParser(GTFParser):
-    @property
-    def attr(self):
-        """
-        Parsing attribute column in gtf file
-        """
-        import re
-        field = {}
-        for attr_values in [re.split(r'=', i.strip()) for i in self.attr_string.split(';')]:
-            key, value = attr_values[0], attr_values[1:]
-            field[key] = ' '.join(value).strip('"')
-        return field
-
-
-
-
-def yield_gtf(gtf_file):
-    with open(gtf_file, 'r') as f:
-        for line in f:
-            if line.startswith('#'):
-                continue
-            content = line.rstrip().split('\t')
-            parser = GTFParser(content)
-            yield parser
-
-
 def index_annotation(gtf):
     """
     Generate binned index for element in gtf
@@ -140,7 +69,7 @@ def revcomp(seq):
 def get_bsj(seq, bsj):
     """Return transformed sequence of given BSJ"""
     return seq[bsj:] + seq[:bsj]
-    
+
 
 def get_n50(sequence_lengths):
     """
@@ -215,26 +144,7 @@ def get_exons(hit):
     return r_block
 
 
-def load_mm_paf(fname, is_cigar=False):
-    """
-    Load minimap2 paf-format output
-    """
-    paf_col = ["qname", "qlen", "qstart", "qend", "strand", "rname", "rlen", "rstart", "rend", "mlen", "blen", "qual"]
-    paf_data = []
-    with open(fname, 'r') as f:
-        for line in f:
-            content = line.rstrip().split("\t")
-            if is_cigar:
-                paf_data.append(content[:len(paf_col)] + [content[-1].split(":")[-1], ])
-            else:
-                paf_data.append(content[:len(paf_col)])
-    
-    if is_cigar:
-        paf_data = pd.DataFrame(paf_data, columns = paf_col + ['CIGAR', ])
-    else:
-        paf_data = pd.DataFrame(paf_data, columns = paf_col)
-    paf_data = paf_data.set_index('qname')
-    return paf_data
+
 
 
 def iter_mm_paf(paf_file, is_cigar=False):

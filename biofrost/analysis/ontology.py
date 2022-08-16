@@ -3,7 +3,7 @@ import pandas as pd
 
 def clusterProfiler(gene_list, id_type='SYMBOL', species='Hs'):
     """Gene ontology analysis of a specific gene list, API of clusterProfiler (http://amp.pharm.mssm.edu/Enrichr/)
-    
+
     Paramters
     ---------
     gene_list : list,

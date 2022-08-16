@@ -2,8 +2,6 @@ import matplotlib.pyplot as plt
 from .utils import change_width
 
 __all__ = [
-    "circos",
-    "utils",
     "change_width",
 ]
 

@@ -3,13 +3,14 @@ from collections import defaultdict, namedtuple
 
 import pandas as pd
 __all__ = [
-    "TaxonDBBase",
+    "TaxonDB",
+    "SilvaDB",
 ]
 
 Name = namedtuple("Name", "name_txt unique_name")
 
 
-class TaxonDBBase(object):
+class TaxonDB(object):
     """
     A class to parse NCBI taxonomy (https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz) ids to levels
 
@@ -190,3 +191,110 @@ class TaxonDBBase(object):
                 else:
                     lvls.append((p_lvl, tmp_names))
         return lvls
+
+
+class SilvaDB(object):
+    """
+    A class to parse SILVA 16S/18S database
+
+    Parameters
+    ----------
+    silva_txt : str
+        Path of tax_slv_[ls]su_VERSION.txt.gz
+    silva_map : str
+        Path of tax_slv_[ls]su_VERSION.map.gz
+    silva_acc : str
+        Path of tax_slv_[ls]su_VERSION.acc_taxid.gz
+
+    Attributes
+    ----------
+    slv_accid : pd.DataFrame
+        Information of SILVA accession id
+
+    Examples
+    --------
+    >>> from biofrost.analysis import SilvaDB
+    >>> silva_db = SilvaDB(
+    >>>     silva_txt="/data/public/database/SILVA/tax_slv_lsu_138.1.txt.gz",
+    >>>     silva_map="/data/public/database/SILVA/tax_slv_lsu_138.1.map.gz",
+    >>>     silva_acc="/data/public/database/SILVA/tax_slv_lsu_138.1.acc_taxid.gz",
+    >>> )
+    >>> silva_db.seq2tax('AAAA02037088.378.3887')
+    taxid                                                29156
+    name                                           Hypocreales
+    path     Eukaryota;Amorphea;Obazoa;Opisthokonta;Nucletm...
+    rank                                                 order
+    Name: AAAA02037088.378.3887, dtype: object
+    """
+    def __init__(self, silva_txt, silva_map, silva_acc):
+        self.slv_txt   = self._init_rank(silva_txt)
+        self.slv_map   = self._init_map(silva_map)
+        self.slv_accid = self._init_acc_taxid(silva_acc)
+
+        self.slv_accid['name'] = self.slv_map.loc[self.slv_accid['taxid']]['name'].values
+        self.slv_accid['path'] = self.slv_txt.loc[self.slv_accid['taxid']]['path'].values
+        self.slv_accid['rank'] = self.slv_txt.loc[self.slv_accid['taxid']]['rank'].values
+
+    def _init_rank(self, silva_txt):
+        """Load silva txt
+
+        tax_slv_[ls]su_VERSION.txt
+        -------------------------
+        These files contain taxonomic rank designations for all taxonomic paths
+        used in the SILVA taxonomies. Additionally, a unique numeric identifier is
+        assigned to each taxon (path). These identifiers will be mostly stable in
+        upcoming SILVA releases.
+
+        IDs used in the SSU and LSU files do not match.
+
+        Field description:
+        path:
+            The full taxonomic path including the name of the group itself.
+            Segments are separated with ";"
+        taxid:
+            numerical identifier
+        rank:
+            The rank designation.
+        remark:
+            Can be empty ('') or a or w.
+            a: Marks taxa of environmental origin. That is, taxa containing no
+            sequence coming from a cultivated organism.
+            w: Marks taxa scheduled for revision in the next release.
+        release:
+            The SILVA release version
+        """
+        slv_txt = pd.read_csv(silva_txt, compression="gzip", sep="\t", header=None)
+        slv_txt.columns = ['path', 'taxid', 'rank', 'remark', 'release']
+        slv_txt = slv_txt.set_index('taxid')
+        return slv_txt
+
+    def _init_map(self, silva_map):
+        """Load silva taxonomy map"""
+        slv_map = pd.read_csv(silva_map, compression="gzip", sep="\t", header=None)
+        slv_map.columns = ['taxid', 'name', 'mark', 'parent']
+        slv_map = slv_map.set_index('taxid')
+        return slv_map
+
+    def _init_acc_taxid(self, silva_acc):
+        """Load silva acc taxid
+
+        tax_TAXNAME_[ls]su_VERSION.acc_taxid
+        ----------------------------
+        Mapping of 'SILVA' sequence IDs (<INSDC primary accession>.<start>.<stop>)
+        used in FASTA files to the numeric SILVA taxid (MEGAN compatible).
+        """
+        slv_accid = pd.read_csv(silva_acc, compression="gzip", sep="\t", header=None)
+        slv_accid.columns = ['sequence', 'taxid']
+        slv_accid = slv_accid.set_index('sequence')
+        return slv_accid
+
+    def seq2tax(self, sequence_name):
+        """Get taxonomy information for SILVA sequence name
+
+        Args:
+            sequence_name (str): query sequence id
+
+        Returns:
+            pd.Series: (taxid, name, path, rank)
+        """
+        return self.slv_accid.loc[sequence_name]

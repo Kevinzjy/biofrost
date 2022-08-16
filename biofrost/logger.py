@@ -10,6 +10,7 @@ class ProgressBar(object):
 
     def __init__(self, width=50):
         """Init the ProgressBar object
+
         Paramters
         ---------
         width : integer, optional (default=50)
@@ -20,11 +21,9 @@ class ProgressBar(object):
 
     def update(self, x):
         """Update progress bar
-        Paramters
-        ---------
-        x : integer, (0 <= x <= 100)
-            the percentage of progress in [0, 100], if x equals input
-            from the last time, the progress bar will not be updated
+
+        Args:
+            x (int): The percentage of progress in [0, 100], if x equals input from the last time, the progress bar will not be updated
         """
         assert 0 <= x <= 100
         if self.last_x == int(x):

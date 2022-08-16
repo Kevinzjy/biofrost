@@ -6,6 +6,7 @@ __all__ = [
     "env",
     "logger",
     "main",
+    "parser",
     "plot",
     "sequence",
     "utils",
