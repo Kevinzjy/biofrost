@@ -1,8 +1,5 @@
-biofrost.logger package
-=======================
-
-Module contents
----------------
+biofrost.logger module
+======================
 
 .. automodule:: biofrost.logger
    :members:

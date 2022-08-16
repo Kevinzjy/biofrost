@@ -24,7 +24,8 @@ clean:
 	python3 setup.py clean --all
 
 doc:
-	cd docs && sphinx-apidoc -f -o ./source ../biofrost
+	pip install -r docs/source/requirements.txt
+	cd docs && sphinx-apidoc -e -M -f -o ./source ../biofrost
 	cd docs && make html
 
 uninstall:

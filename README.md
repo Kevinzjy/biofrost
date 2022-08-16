@@ -1,6 +1,13 @@
 # biofrost
 
-<img src="https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.x/svgs/solid/bridge.svg" width="50" height="50">
+[![Documentation Status](https://readthedocs.org/projects/biofrost/badge/?version=latest)]![GitHub](https://img.shields.io/github/license/kevinzjy/biofrost?label=license)
 
-The magic bifrost bridge of bioinformatic
+The magic bifrost bridge of bioinformatic.
 
+Still under developing, for internal use only.
+
+## Installation
+
+```bash
+pip install biofrost
+```

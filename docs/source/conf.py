@@ -22,8 +22,13 @@ release = '0.1'
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'sphinx.ext.coverage',
 ]
 
+autodoc_default_options = {
+    'members':         True,
+    'member-order':    'bysource',
+}
 templates_path = ['_templates']
 exclude_patterns = []
 add_module_names = False
