@@ -44,10 +44,10 @@ setup(
         'scikit-learn>=1.0.2',
         'pysam>=0.19.1',
     ],
-    extras_require={
-        'bert': ['bert-serving-server>=1.8.6', 'bert-serving-client>=1.8.6', 'pytorch-transformer', 'flair'],
-        'vision': ['opencv-python>=4.0.0', 'imagehash>=4.0', 'image', 'peakutils'],
-    },
+    # extras_require={
+    #     'bert': ['bert-serving-server>=1.8.6', 'bert-serving-client>=1.8.6', 'pytorch-transformer', 'flair'],
+    #     'vision': ['opencv-python>=4.0.0', 'imagehash>=4.0', 'image', 'peakutils'],
+    # },
     test_suite="nose.collector",
     tests_require=['nose==1.3.7'],
     classifiers=[
