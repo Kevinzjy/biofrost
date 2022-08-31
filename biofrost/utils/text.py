@@ -50,42 +50,6 @@ def to_bytes(bytes_or_str):
 
 
 
-
-# def empty_iter(iterable):
-#     """
-#     Return None if the iterable object is empty
-#     """
-#     try:
-#         first = next(iterable)
-#     except StopIteration:
-#         return None
-#     return itertools.chain([first], iterable)
-
-
-# def grouper(iterable, n, fillvalue=None):
-#     """
-#     Collect data info fixed-length chunks or blocks
-#     grouper('ABCDEFG', 3, 'x') --> ABC DEF Gxx
-#     """
-#     from itertools import zip_longest
-#     args = [iter(iterable)] * n
-#     return zip_longest(*args, fillvalue=None)
-
-
-# def flatten(x):
-#     """Flatten list of lists"""
-#     flatted_list = list(itertools.chain(*x))
-#     return flatted_list
-
-
-# def pairwise(iterable):
-#     """"s -> (s0,s1), (s1,s2), (s2, s3), ..."""
-#     from itertools import tee
-#     a, b = tee(iterable)
-#     next(b, None)
-#     return zip(a, b)
-
-
 # def tree():
 #     """Tree structure"""
 #     from collections import defaultdict
@@ -148,31 +112,3 @@ def to_bytes(bytes_or_str):
 #     return 1
 
 
-# def merge_intervals(blocks):
-#     from operator import itemgetter
-#     tmp = sorted(blocks, key=itemgetter(0, 1))
-#     merged = []
-#     last_st, last_en = tmp[0][0], tmp[0][1]
-#     for x in tmp[1:]:
-#         st, en = x[0], x[1]
-#         if st <= last_en + 1:
-#             last_en = max(en, last_en)
-#             last_st = min(st, last_st)
-#         else:
-#             merged.append([last_st, last_en])
-#             last_st, last_en = st, en
-#     merged.append([last_st, last_en])
-#     return merged
-
-
-# def cluster_peaks(x, gap=5):
-#     if len(x) == 0:
-#         return []
-#     x_sorted = sorted(x)
-#     clustered = [[x_sorted[0], x_sorted[0]], ]
-#     for i in x_sorted[1:]:
-#         if i-clustered[-1][1] > gap:
-#             clustered.append([i,i])
-#         else:
-#             clustered[-1][1] = i
-#     return clustered

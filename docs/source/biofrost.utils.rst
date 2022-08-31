@@ -12,5 +12,7 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   biofrost.utils.intervals
    biofrost.utils.io
+   biofrost.utils.iter
    biofrost.utils.text

@@ -58,12 +58,7 @@ def index_annotation(gtf):
     return gtf_index, intron_index, splice_site_index
 
 
-def revcomp(seq):
-    """
-    Convert sequence to reverse complementary
-    """
-    trantab = str.maketrans("ATCG", "TAGC")
-    return seq.translate(trantab)[::-1]
+
 
 
 def get_bsj(seq, bsj):

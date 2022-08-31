@@ -133,7 +133,7 @@ class TaxonDB(object):
                 name class                              -- (synonym, common name, ...)
         """
         taxon_names = defaultdict(dict)
-        with open('/data/public/database/taxonomy/names.dmp', 'r') as f:
+        with open(names_dmp, 'r') as f:
             for line in f:
                 content = line.rstrip("\t|\n").split("\t|\t")
                 tax_id, name_txt, uniq_name, name_class = content
@@ -174,8 +174,7 @@ class TaxonDB(object):
             for p_lvl, p_name in paths:
                 # No name class found
                 if name_class not in p_name:
-                    lvls.append((p_lvl, ""))
-                    continue
+                    yield p_lvl, ""
 
                 # Collect name txt
                 tmp_names = []
@@ -187,10 +186,29 @@ class TaxonDB(object):
 
                 # Deal with unique name_class
                 if len(tmp_names) == 1:
-                    lvls.append((p_lvl, tmp_names[0]))
+                    yield p_lvl, tmp_names[0]
                 else:
-                    lvls.append((p_lvl, tmp_names))
+                    yield p_lvl, tmp_names
         return lvls
+
+    def fetch_level(self, tax_id, rank="genus", name_class="scientific name", use_uniq=False):
+        """Fetch specific taxonomy level of given  id
+
+        Args:
+            tax_id (int): Query taxonomy id
+            rank (str, optional): Rank to query {superkingdom, kingdom, phylum, order, family, genus, species}. Defaults to "genus".
+            name_class (str, optional): Type of name (synonym, common name, ...). Defaults to "scientific name".
+            use_uniq (bool, optional): Use the unique variant of taxonomy name. Defaults to False. Defaults to False.
+
+        Returns:
+            str: Name of specific rank, None if not exist.
+        """
+        assert rank in ['superkingdom', 'kingdom', 'phylum', 'order', 'family', 'genus', 'species']
+        paths = self.fetch_levels(tax_id, name_class, use_uniq)
+        for name_rank, name_txt in paths:
+            if name_rank == rank:
+                return name_txt
+        return None
 
 
 class SilvaDB(object):

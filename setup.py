@@ -43,6 +43,8 @@ setup(
         'pandas>=1.1.5',
         'scikit-learn>=1.0.2',
         'pysam>=0.19.1',
+        'pytz>=2022.2.1',
+        'seaborn>=0.11.2',
     ],
     # extras_require={
     #     'bert': ['bert-serving-server>=1.8.6', 'bert-serving-client>=1.8.6', 'pytorch-transformer', 'flair'],

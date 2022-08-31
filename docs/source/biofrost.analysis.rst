@@ -12,6 +12,7 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   biofrost.analysis.alignment
    biofrost.analysis.bioinfo
    biofrost.analysis.de
    biofrost.analysis.models

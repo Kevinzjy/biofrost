@@ -11,6 +11,7 @@ __all__ = [
     "is_fastq",
     "read_fastx",
     "yield_fastx",
+    "revcomp",
 ]
 
 Seq = namedtuple("Seq", "header seq qual")
@@ -192,3 +193,11 @@ def yield_fastx(fa_file):
         yield from _yield_fastq(fa_file, is_gz)
     else:
         yield from _yield_fasta(fa_file, is_gz)
+
+
+def revcomp(seq):
+    """
+    Convert sequence to reverse complementary
+    """
+    trantab = str.maketrans("ATCG", "TAGC")
+    return seq.translate(trantab)[::-1]

@@ -5,6 +5,8 @@ __all__ = [
     "read_paf",
     "yield_paf",
     "batch_yield_paf",
+    "read_event",
+    "batch_yield_event",
 ]
 
 STRANDNESS = {"+": 1, "-": -1, ".": 0}
@@ -104,6 +106,7 @@ class PAFParser(object):
         return pd.Series(data=tmp_row, index=tmp_cols)
 
 
+
 def read_paf(paf_file, index_col=None):
     """Load minimap2 paf into dataframe
 
@@ -122,6 +125,14 @@ def read_paf(paf_file, index_col=None):
             content = line.rstrip().split("\t")
             paf_data.append(content[:12] + [content[13:], ])
     paf_data = pd.DataFrame(paf_data, columns = paf_col)
+    paf_data['qlen'] = paf_data['qlen'].astype(int)
+    paf_data['qstart'] = paf_data['qstart'].astype(int)
+    paf_data['qend'] = paf_data['qend'].astype(int)
+    paf_data['rlen'] = paf_data['rlen'].astype(int)
+    paf_data['rstart'] = paf_data['rstart'].astype(int)
+    paf_data['rend'] = paf_data['rend'].astype(int)
+    paf_data['mlen'] = paf_data['mlen'].astype(int)
+    paf_data['blen'] = paf_data['blen'].astype(int)
     if index_col is not None:
         paf_data = paf_data.set_index(paf_col[index_col])
 
@@ -240,3 +251,47 @@ def batch_yield_paf(paf_file, tags=[]):
 #         else:
 #             raise CSError(f"Unknown cs string: {cs}")
 #     return base_alignment, read_alignment
+
+
+def read_event(event_file):
+    """Read nanopolish eventalign result
+
+    Args:
+        event_file (str): Path of eventalign output file
+
+    Returns:
+        pd.DataFrame: Aligned events
+    """
+    event_data = []
+    with open(event_file, 'r') as f:
+        header = f.readline().rstrip().split('\t')
+        for line in f:
+            content = line.rstrip().split('\t')
+            event_data.append(content)
+    event_data = pd.DataFrame(event_data, columns=header)
+    return event_data
+
+
+def batch_yield_event(event_file):
+    """Iter through nanopolish eventalign results by read index
+
+    Args:
+        event_file (str): Path of eventalign output file
+
+    Yields:
+        ((str, str, str), pd.DataFrame): ((transcript_id, read_index, strand),aligned events in pd.DataFrame format)
+    """
+    chunk = []
+    read_index = None
+    with open(event_file, 'r') as f:
+        header = f.readline().rstrip().split('\t')
+        for line in f:
+            content = line.rstrip().split('\t')
+            if (content[0], content[3], content[4]) != read_index:
+                if read_index is not None:
+                    yield read_index, pd.DataFrame(chunk, columns=header)
+                read_index = (content[0], content[3], content[4])
+                chunk = [content, ]
+            else:
+                chunk.append(content)
+        yield read_index, pd.DataFrame(chunk, columns=header)
