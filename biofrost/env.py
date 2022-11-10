@@ -9,4 +9,5 @@ import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
 
+# For plotting parameters
 from biofrost import plot

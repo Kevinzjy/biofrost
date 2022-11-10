@@ -74,7 +74,7 @@ class GFFParser(object):
     def attr(self):
         """Get additional information"""
         field = {}
-        for attr_values in [re.split(r'\s+', i.strip()) for i in self.attr_string.split(';')[:-1]]:
+        for attr_values in [re.split(r'=', i.strip()) for i in self.attr_string.split(';')]:
             key, value = attr_values[0], attr_values[1:]
             field[key] = ' '.join(value).strip('"')
         return field
@@ -145,9 +145,8 @@ GTF_transcript_name = re.compile(r'transcript_name "(\S+)";')
 class GTFParser(GFFParser):
     @property
     def attr(self):
-        import re
         field = {}
-        for attr_values in [re.split(r'=', i.strip()) for i in self.attr_string.split(';')]:
+        for attr_values in [re.split(r'\s+', i.strip()) for i in self.attr_string.split(';')[:-1]]:
             key, value = attr_values[0], attr_values[1:]
             field[key] = ' '.join(value).strip('"')
         return field

@@ -8,25 +8,30 @@ from multiprocessing.managers import BaseManager
 class ProgressBar(object):
     """A simple progress bar with date stamp"""
 
-    def __init__(self, width=50):
+    def __init__(self, width=50, total=100):
         """Init the ProgressBar object
 
         Paramters
         ---------
         width : integer, optional (default=50)
             The width of progress bar
+        total : integer, optional (default=100)
+            The total jobs of progress bar
         """
         self.last_x = -1
         self.width = width
+        self.total = total
+        self.processed = 0
 
-    def update(self, x):
+    def update(self, x, force=False):
         """Update progress bar
 
         Args:
             x (int): The percentage of progress in [0, 100], if x equals input from the last time, the progress bar will not be updated
         """
+        x = min(100, x)
         assert 0 <= x <= 100
-        if self.last_x == int(x):
+        if self.last_x == int(x) and force is not True:
             return
         self.last_x = int(x)
         p = int(self.width * (x / 100.0))
@@ -34,10 +39,28 @@ class ProgressBar(object):
         sys.stderr.write('\r%s [%-5s] [%s]' % (time_stamp, str(int(x)) + '%', '#' * p + '.' * (self.width - p)))
         sys.stderr.flush()
 
+    def update_total(self, x):
+        """Update total number of jobs
+
+        Args:
+            x (int): total number
+        """
+        self.total = int(x)
+
+    def process(self, x):
+        """Update progress bar using processed jobs
+
+        Args:
+            x (int): The number of jobs recently finished
+        """
+        self.processed += x
+        self.update(100 * self.processed / self.total)
+
     def self_update(self):
         self.update(max(100, self.last_x + 1))
 
     def close(self):
+        """Finish progress bar and print new line"""
         self.update(100)
         sys.stderr.write('\n')
 
@@ -87,3 +110,12 @@ def find_logger_basefilename(logger):
     else:
         log_file = find_logger_basefilename(parent)
     return log_file
+
+
+def error_callback(e):
+    """Error callback functions for multiprocessing Pool
+
+    Args:
+        e (Exception): Exception caught in processes
+    """
+    sys.stderr.write(f"Error in worker process: {e.__cause__}")

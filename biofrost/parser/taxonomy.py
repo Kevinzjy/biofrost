@@ -192,7 +192,7 @@ class TaxonDB(object):
         return lvls
 
     def fetch_level(self, tax_id, rank="genus", name_class="scientific name", use_uniq=False):
-        """Fetch specific taxonomy level of given  id
+        """Fetch specific taxonomy level of given id
 
         Args:
             tax_id (int): Query taxonomy id
@@ -209,6 +209,26 @@ class TaxonDB(object):
             if name_rank == rank:
                 return name_txt
         return None
+
+
+    def batch_fetch_levels(self, taxon_ids, levels=["superkingdom", "kingdom", "phylum", "order", "family", "genus", "species"]):
+        """Fetch taxonomy path for given ids
+
+        Args:
+            taxon_ids (iter): Iterator of query taxonomy ids
+
+        Returns:
+            pd.DataFrame: dataframe of taxnomy levels
+        """
+        valid_levels = set(levels)
+        batch_df = {}
+        for x in taxon_ids:
+            if x in self.taxon_names:
+                batch_df[x] = {i: j for i, j in self.fetch_levels(x) if i in valid_levels}
+            else:
+                batch_df[x] = {}
+
+        return pd.DataFrame(batch_df).T[levels]
 
 
 class SilvaDB(object):

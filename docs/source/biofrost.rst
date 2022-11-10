@@ -13,6 +13,7 @@ Subpackages
    :maxdepth: 4
 
    biofrost.analysis
+   biofrost.models
    biofrost.parser
    biofrost.plot
    biofrost.sequence

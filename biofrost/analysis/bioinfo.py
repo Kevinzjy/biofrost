@@ -8,6 +8,24 @@ from subprocess import getstatusoutput
 from biofrost.utils import to_str
 
 
+def get_n50(sequence_lengths):
+    """Get N50 of given array
+
+    Args:
+        sequence_lengths (int): vector of sequence length
+
+    Returns:
+        int: N50 of given vector
+    """
+    sequence_lengths = sorted(sequence_lengths, reverse=True)
+    total_bases = sum(sequence_lengths)
+    target_bases = total_bases * 0.5
+    bases_so_far = 0
+    for sequence_length in sequence_lengths:
+        bases_so_far += sequence_length
+        if bases_so_far >= target_bases:
+            return sequence_length
+    return 0
 
 
 def index_annotation(gtf):
@@ -58,27 +76,11 @@ def index_annotation(gtf):
     return gtf_index, intron_index, splice_site_index
 
 
-
-
-
 def get_bsj(seq, bsj):
     """Return transformed sequence of given BSJ"""
     return seq[bsj:] + seq[:bsj]
 
 
-def get_n50(sequence_lengths):
-    """
-    Get n50 of sequence lengths
-    """
-    sequence_lengths = sorted(sequence_lengths, reverse=True)
-    total_bases = sum(sequence_lengths)
-    target_bases = total_bases * 0.5
-    bases_so_far = 0
-    for sequence_length in sequence_lengths:
-        bases_so_far += sequence_length
-        if bases_so_far >= target_bases:
-            return sequence_length
-    return 0
 
 def get_mm_exons(hit):
     """
@@ -180,7 +182,6 @@ def load_idr_bed(infile, as_pyranges=False):
 
     return df
 
-
 def load_narrowPeak(infile, as_pyranges=False):
     import pyranges as pr
     narrowPeak_header = [
@@ -188,7 +189,7 @@ def load_narrowPeak(infile, as_pyranges=False):
     ]
     df = pd.read_csv(infile, sep="\t", header=None)
     df.columns = narrowPeak_header
-    
+
     if as_pyranges:
         peaks = pr.PyRanges(df.rename({"chrom": "Chromosome", "chromStart": "Start", "chromEnd": "End", "strand": "Strand"}, axis=1))
         return peaks

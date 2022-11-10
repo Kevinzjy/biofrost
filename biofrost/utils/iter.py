@@ -22,7 +22,7 @@ def grouper(iterable, n, fillvalue=None):
     """
     from itertools import zip_longest
     args = [iter(iterable)] * n
-    return zip_longest(*args, fillvalue=None)
+    return zip_longest(*args, fillvalue=fillvalue)
 
 
 def empty_iter(iterable):

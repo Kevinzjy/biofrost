@@ -10,7 +10,7 @@ def expectation_maximization(reads, classifications, noise_threshold=0, max_iter
     Args:
         reads (np.array): array of query reads
         classifications (np.array): array of aligned genes / taxons
-        noise_threshold (int, optional): Minimum abundance for kept during EM iteration [0-1]. Defaults to 0.
+        noise_threshold (float, optional): Minimum abundance for kept during EM iteration [0-1]. Defaults to 0.
         max_iter (int, optional): Maximum EM iteration numbers. Defaults to 1000.
         max_delta (_type_, optional): Maximum detla of estimated gene / taxon abundance. Defaults to 1e-10.
         verbose (bool, optional): Verbose output. Defaults to False.
