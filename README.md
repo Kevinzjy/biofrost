@@ -10,5 +10,9 @@ Still under developing, for internal use only.
 ## Installation
 
 ```bash
+# Install released version
 pip install biofrost
+
+# Install developmental version
+pip install 'git+https://github.com/Kevinzjy/biofrost'
 ```

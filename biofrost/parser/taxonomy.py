@@ -1,5 +1,6 @@
 """Functions for taxonomy related analysis"""
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, Counter
+from biofrost.analysis import expectation_maximization
 
 import pandas as pd
 __all__ = [
@@ -8,6 +9,7 @@ __all__ = [
 ]
 
 Name = namedtuple("Name", "name_txt unique_name")
+Levels = ['superkingdom', 'clade', 'phylum', 'class', 'order', 'family', 'genus', 'species']
 
 
 class TaxonDB(object):
@@ -150,28 +152,51 @@ class TaxonDB(object):
         tax_name = self.taxon_names[tax_id]
 
         if tax_id == 1:
-            return [(rank, tax_name), ]
+            return [(rank, tax_id, tax_name), ]
 
         parent_node = self.taxon_nodes.loc[parent_id]
-        return self._backtrace_node(parent_node) + [(rank, tax_name), ]
+        return self._backtrace_node(parent_node) + [(rank, tax_id, tax_name), ]
 
-    def fetch_levels(self, tax_id, name_class="scientific name", use_uniq=False):
+    def fetch_taxon_name(self, tax_id, name_class="scientific name", use_uniq=False):
+        """Get name of taxonomy id
+
+        Args:
+            tax_id (int): query taxonomy id
+            name_class (str, optional): type of name (authority, synonym, blast name, scientific name, common name, taxonomy id). Defaults to "scientific name".
+            use_uniq (bool, optional): use the unique variant of taxonomy name. Defaults to False.
+
+        Returns:
+            str / list: taxonomy name(s)
+        """
+
+        tax_name = self.taxon_names[tax_id]
+        tmp_names = []
+        for name in tax_name[name_class]:
+            if use_uniq and name.uniq_name != "":
+                tmp_names.append(name.unique_name)
+            else:
+                tmp_names.append(name.name_txt)
+
+        if len(tmp_names) == 1:
+            return tmp_names[0]
+        return tmp_names
+
+    def fetch_taxon_path(self, tax_id, name_class="scientific name", use_uniq=False):
         """Get all levels of query taxonomy id
 
         Args:
             tax_id (int): query taxonomy id
-            name_class (str, optional): Type of name (synonym, common name, ...). Defaults to "scientific name".
+            name_class (str, optional): Type of name (authority, synonym, blast name, scientific name, common name, taxonomy id). Defaults to "scientific name".
             use_uniq (bool, optional): Use the unique variant of taxonomy name. Defaults to False.
 
         Returns:
-            list: [(level, name)] if name is unique, otherwise [(level, list(names))]
+            generator object: [(level, name)] if name is unique, otherwise [(level, list(names))]
         """
         leaf_node = self.taxon_nodes.loc[tax_id]
         paths = self._backtrace_node(leaf_node)
 
-        lvls = []
-        if name_class == "scientific name":
-            for p_lvl, p_name in paths:
+        if name_class in ["authority", "synonym", "blast name", "scientific name", "common name"]:
+            for p_lvl, p_id, p_name in paths:
                 # No name class found
                 if name_class not in p_name:
                     yield p_lvl, ""
@@ -189,9 +214,13 @@ class TaxonDB(object):
                     yield p_lvl, tmp_names[0]
                 else:
                     yield p_lvl, tmp_names
-        return lvls
+        elif name_class == "taxonomy id":
+            for p_lvl, p_id, _ in paths:
+                yield p_lvl, p_id
+        else:
+            raise KeyError(f"Name class: {name_class} not supported!")
 
-    def fetch_level(self, tax_id, rank="genus", name_class="scientific name", use_uniq=False):
+    def fetch_taxon_level(self, tax_id, rank="genus", name_class="scientific name", use_uniq=False):
         """Fetch specific taxonomy level of given id
 
         Args:
@@ -204,14 +233,13 @@ class TaxonDB(object):
             str: Name of specific rank, None if not exist.
         """
         assert rank in ['superkingdom', 'kingdom', 'phylum', 'order', 'family', 'genus', 'species']
-        paths = self.fetch_levels(tax_id, name_class, use_uniq)
+        paths = self.fetch_taxon_path(tax_id, name_class, use_uniq)
         for name_rank, name_txt in paths:
             if name_rank == rank:
                 return name_txt
         return None
 
-
-    def batch_fetch_levels(self, taxon_ids, levels=["superkingdom", "kingdom", "phylum", "order", "family", "genus", "species"]):
+    def batch_fetch_path(self, taxon_ids, levels=Levels):
         """Fetch taxonomy path for given ids
 
         Args:
@@ -220,15 +248,10 @@ class TaxonDB(object):
         Returns:
             pd.DataFrame: dataframe of taxnomy levels
         """
-        valid_levels = set(levels)
-        batch_df = {}
-        for x in taxon_ids:
-            if x in self.taxon_names:
-                batch_df[x] = {i: j for i, j in self.fetch_levels(x) if i in valid_levels}
-            else:
-                batch_df[x] = {}
-
-        return pd.DataFrame(batch_df).T[levels]
+        taxon_names = pd.DataFrame({x: dict(self.fetch_taxon_path(x, name_class="scientific name")) for x in taxon_ids}).T
+        taxon_col = [i for i in levels if i in taxon_names.columns]
+        taxon_names = taxon_names.loc[:, taxon_col]
+        return taxon_names
 
 
 class SilvaDB(object):
@@ -336,3 +359,116 @@ class SilvaDB(object):
             pd.Series: (taxid, name, path, rank)
         """
         return self.slv_accid.loc[sequence_name]
+
+
+def load_centrifuge(clf_file, taxon_db, lvl_name="genus", aln_perc=.1, use_EM=False):
+    """Load centrifuge classification output
+
+    Args:
+        clf_file (_type_): path to centrifuge classification output
+        taxon_db (TaxonDB): see biofrost.parser.TaxonDB
+        lvl_name (str, optional): taxonomy level (superkingdom, clade, phylum, class, order, family, genus, species). Defaults to "genus".
+        aln_perc (float, optional): threshold for filter high confidence alignment. Defaults to .1.
+        use_EM (bool, optional): whether use EM to calculate taxonomy abundance. Defaults to False.
+
+    Returns:
+        pd.Series: abundance of each taxonomy ids
+    """
+
+    # Load centrifuge output
+    df = pd.read_csv(clf_file, sep="\t")
+    df = df.loc[df['hitLength']/df['queryLength'] >= aln_perc]
+    df = df.loc[df['taxID'].isin(taxon_db.taxon_nodes.index)]
+    df['rank'] = taxon_db.taxon_nodes.loc[df['taxID']]['rank'].values
+
+    # Convert taxonomy IDs to full level paths
+    taxon_levels = pd.DataFrame({taxID: dict(taxon_db.fetch_taxon_path(taxID, name_class="taxonomy id")) for taxID in df['taxID'].unique()}).T
+    taxon_levels = taxon_levels.loc[:, taxon_levels.columns.isin(Levels)]
+
+    # Merge dataframe
+    df = pd.concat([df.reset_index(drop=True), taxon_levels.loc[df['taxID']].reset_index(drop=True)], axis=1)
+
+    # Calculate abundance
+    lvl_df = df.loc[~df[lvl_name].isna()]
+    lvl_df = lvl_df[['readID', lvl_name]].drop_duplicates()
+    if use_EM:
+        abundance, _ = expectation_maximization(lvl_df['readID'].values, lvl_df[lvl_name].values, noise_threshold=1/lvl_df.shape[0], verbose=True)
+    else:
+        n_hits = Counter(lvl_df['readID'])
+        abundance = defaultdict(int)
+        for r, c in zip(lvl_df['readID'], lvl_df[lvl_name]):
+            abundance[c] += 1 / n_hits[r]
+        abundance = pd.Series(abundance).sort_values(ascending=False)
+
+    return abundance
+
+
+def load_diamond2(clf_file, taxon_db, lvl_name="genus", max_e=1e-6, use_EM=False):
+    """Load diamond2 alignment format 102 output
+
+    Args:
+        clf_file (_type_): path of diamond2 output
+        taxon_db (TaxonDB): see biofrost.parser.TaxonDB
+        lvl_name (str, optional): taxonomy level (superkingdom, clade, phylum, class, order, family, genus, species). Defaults to "genus".
+        max_e (float, optional): evalue threshold. Defaults to 1e-6.
+        use_EM (bool, optional): whether use EM to calculate taxonomy abundance. Defaults to False.
+
+    Returns:
+        pd.Series: abundance of each taxonomy ids
+    """
+
+    df = pd.read_csv(clf_file, sep="\t", header=None)
+    df.columns = ['readID', 'taxID', 'evalue']
+    df = df.loc[(df['evalue'] <= max_e) & (df['taxID'] != 0)]
+    df['rank'] = taxon_db.taxon_nodes.loc[df['taxID']]['rank'].values
+
+    # Convert taxonomy IDs to full level paths
+    taxon_levels = pd.DataFrame({taxID: dict(taxon_db.fetch_taxon_path(taxID, name_class="taxonomy id")) for taxID in df['taxID'].unique()}).T
+    taxon_levels = taxon_levels.loc[:, taxon_levels.columns.isin(Levels)]
+
+    # Merge dataframe
+    df = pd.concat([df.reset_index(drop=True), taxon_levels.loc[df['taxID']].reset_index(drop=True)], axis=1)
+
+    # Calculate abundance
+    lvl_df = df.loc[~df[lvl_name].isna()]
+    lvl_df = lvl_df[['readID', lvl_name]].drop_duplicates()
+    if use_EM:
+        abundance, _ = expectation_maximization(lvl_df['readID'].values, lvl_df[lvl_name].values, noise_threshold=1/lvl_df.shape[0], verbose=True)
+    else:
+        n_hits = Counter(lvl_df['readID'])
+        abundance = defaultdict(int)
+        for r, c in zip(lvl_df['readID'], lvl_df[lvl_name]):
+            abundance[c] += 1 / n_hits[r]
+        abundance = pd.Series(abundance).sort_values(ascending=False)
+    return abundance
+
+
+def load_kraken2(clf_file, taxon_db, lvl_name="genus"):
+    """Load kraken2 kreport output
+
+    Args:
+        clf_file (Path): path of kraken2 kreport output
+        taxon_db (TaxonDB): see biofrost.parser.TaxonDB
+        lvl_name (str, optional): taxonomy level (superkingdom, clade, phylum, class, order, family, genus, species). Defaults to "genus".
+
+    Returns:
+        pd.Series: abundance of each taxonomy ids
+    """
+
+    df = pd.read_csv(clf_file, sep="\t", header=None)
+    df.columns = ["Abundance", "Reads", "Assigned", "Class", "taxID", "Name"]
+    df = df.loc[df['taxID'] != 0]
+
+    df['rank'] = taxon_db.taxon_nodes.loc[df['taxID']]['rank'].values
+
+    taxon_levels = pd.DataFrame({taxID: dict(taxon_db.fetch_taxon_path(taxID, name_class="taxonomy id")) for taxID in df['taxID'].unique()}).T
+    taxon_levels = taxon_levels.loc[:, taxon_levels.columns.isin(Levels)]
+
+    df = pd.concat([df.reset_index(drop=True), taxon_levels.loc[df['taxID']].reset_index(drop=True)], axis=1)
+
+    lvl_df = df.loc[~df[lvl_name].isna()]
+    lvl_df = lvl_df.loc[lvl_df['rank'] == lvl_name]
+
+    abundance = lvl_df.set_index('taxID')["Abundance"]
+
+    return abundance

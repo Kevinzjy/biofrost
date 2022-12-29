@@ -81,7 +81,6 @@ def get_bsj(seq, bsj):
     return seq[bsj:] + seq[:bsj]
 
 
-
 def get_mm_exons(hit):
     """
     Get blocks of aligned segments
