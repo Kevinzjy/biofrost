@@ -1,12 +1,13 @@
 """Functions for dealing with string / bytes"""
-# import os
+import os
+from pathlib import Path
 # import sys
 # import re
 # import itertools
 # import time
 
 __all__ = [
-    "to_str", "to_bytes",
+    "to_str", "to_bytes", "generate_random_key", "mk_random_dir",
 ]
 
 
@@ -26,6 +27,43 @@ def to_bytes(bytes_or_str):
     else:
         value = bytes_or_str
     return value
+
+
+def generate_random_key(length):
+    """Generate random key of specific length
+
+    Args:
+        length (int): length
+
+    Returns:
+        str: random string
+    """
+    import random
+    import string
+    return ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(length))
+
+
+def mk_random_dir(tmp_dir=None):
+    """Create random directory
+
+    Args:
+        tmp_dir (str, optional): path of temporary directory. Defaults to /tmp or TMP_DIR.
+
+    Returns:
+        pathlib.Path: Path object
+    """
+    tmp_dir = None
+    if tmp_dir is None and 'TMP_DIR' in os.environ:
+        tmp_dir = os.environ['TMP_DIR']
+    else:
+        tmp_dir = "/tmp"
+
+    root = Path(tmp_dir) / f"pyblast_{generate_random_key(6).upper()}"
+    while root.exists():
+        root = Path(tmp_dir) / f"pyblast_{generate_random_key(6).upper()}"
+    root.mkdir()
+
+    return root
 
 
 # def ranking(ranks, names, order=1):
@@ -56,11 +94,6 @@ def to_bytes(bytes_or_str):
 #     return defaultdict(tree)
 
 
-# def generate_random_key(length):
-#     """Generate key of specific length"""
-#     import random
-#     import string
-#     return ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(length))
 
 
 # def hash_str(f):
