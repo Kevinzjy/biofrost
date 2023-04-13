@@ -135,6 +135,9 @@ def run_blastn(queries, subjects, task="blastn", blast_dir="/data/public/softwar
         raise ValueError(f"Failed run to command: {run_cmd}\n{output}\n")
 
     # Parse output
+    if len(output) == 0:
+        return None
+
     tabular_out = pd.read_csv(StringIO(output), sep="\t", header=None)
     tabular_out.columns = ['qseqid', 'sseqid', 'pident', 'length', 'mismatch', 'gapopen', 'qstart', 'qend', 'sstart', 'send', 'evalue', 'bitscore']
 
