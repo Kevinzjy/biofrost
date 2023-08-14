@@ -1,5 +1,7 @@
+import logging
 import matplotlib.pyplot as plt
 from .utils import set_bar_width, set_violin_alpha, customize_cmap, get_value_colors, confidence_ellipse
+logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR) # Supress matplotlib font manager errors
 
 __all__ = [
     "set_bar_width",
@@ -8,6 +10,8 @@ __all__ = [
     "get_value_colors",
     "confidence_ellipse",
 ]
+
+
 
 # Plotting parameters
 plt.rcParams['pdf.fonttype'] = 42

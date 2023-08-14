@@ -29,7 +29,12 @@ def chat(prompt, proxy_host='127.0.0.1', proxy_port='1087', api_key=None):
 
     url = 'https://api.openai.com/v1/chat/completions'
     model_name = 'gpt-3.5-turbo'
-    json_data = {'model': model_name, 'messages': [{'role': 'user', 'content': prompt}]}
+    json_data = {
+        'model': model_name,
+        'messages': [{'role': 'user', 'content': prompt}],
+        'temperature': 0.1,
+        'user': 'biofrost',
+    }
 
     response = requests.post(url, headers=headers, json=json_data, proxies=proxies)
     ret = json.loads(response.text.strip())

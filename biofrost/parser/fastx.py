@@ -1,4 +1,5 @@
 """Functions for parsing FASTA/FASTX format"""
+import sys
 import os
 import gzip
 from collections import namedtuple
