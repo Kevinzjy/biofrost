@@ -1,7 +1,8 @@
 import pandas as pd
+from pathlib import Path
 
 
-def clusterProfiler(gene_list, id_type='SYMBOL', species='Hs'):
+def clusterProfiler(gene_list, id_type='SYMBOL', species='Hs', function="GO"):
     """Gene ontology analysis of a specific gene list, API of clusterProfiler (http://amp.pharm.mssm.edu/Enrichr/)
 
     Paramters
@@ -12,30 +13,34 @@ def clusterProfiler(gene_list, id_type='SYMBOL', species='Hs'):
         type of input list, ENSEMBL / SYMBOL / ENTREZID
     species : str,
         reference database, Hs (Human) / Mm (Mouse)
+    function : str,
+        analysis functions, GO (Gene ontology) / KEGG
     Returns
     -------
     pd.DataFrame :
         enriched data
     """
     from pathlib import Path
-    from .utils import generate_random_key
-    from .bioinfo import StupidError
     from subprocess import getstatusoutput
-    token = generate_random_key(6).upper()
+    from biofrost.utils import generate_random_key
 
+    token = hex(hash("".join(sorted(gene_list))))[2:].upper()
     src_file = '/tmp/clusterProfiler_{}.txt'.format(token)
-    tar_file = '/tmp/clusterProfiler_{}_GO.txt'.format(token)
+    tar_file = '/tmp/clusterProfiler_{}_{}.txt'.format(token, function)
+
+    if Path(tar_file).exists():
+        enriched_data = pd.read_csv(tar_file, index_col=0)
+        return enriched_data
 
     with open(src_file, 'w') as out:
         for gene_id in gene_list:
             out.write('{}\n'.format(gene_id))
 
-    rcmd = Path(__file__).parent.parent / 'R' / 'clusterProfiler.R'
-
     # Run clusterProfiler
-    status, output = getstatusoutput('/usr/bin/Rscript {} --input {} --output {} --type {} --db {}'.format(rcmd, src_file, tar_file, id_type, species))
+    rcmd = Path(__file__).parent / 'clusterProfiler.R'
+    status, output = getstatusoutput('/usr/bin/Rscript {} --input {} --output {} --type {} --db {} --analysis {}'.format(rcmd, src_file, tar_file, id_type, species, function))
     if status != 0:
-        raise StupidError(output)
+        raise Exception(output)
 
     # Get results
     enriched_data = pd.read_csv(tar_file, index_col=0)
@@ -45,7 +50,7 @@ def clusterProfiler(gene_list, id_type='SYMBOL', species='Hs'):
 
 def enrichR(gene_list, input_libraries=None):
     """Gene ontology analysis of a specific gene list, API of enrichR (http://amp.pharm.mssm.edu/Enrichr/)
-    
+
     Paramters
     ---------
     gene_list : list,
@@ -73,7 +78,7 @@ def enrichR(gene_list, input_libraries=None):
         raise Exception('Error analyzing gene list')
 
     data = json.loads(response.text)
-    
+
     user_id = data['userListId']
     if input_libraries is None:
         enrichr_libraries = ['GO_Biological_Process_2021', 'GO_Cellular_Component_2021', 'GO_Molecular_Function_2021']
@@ -87,12 +92,12 @@ def enrichR(gene_list, input_libraries=None):
         enriched_data.append(library_data)
     enriched_data = pd.concat(enriched_data)
     return enriched_data
-        
-    
+
+
 def _gene_set_analysis(user_list_id, gene_set_library):
     import json
     import requests
-    
+
     ENRICHR_URL = 'http://amp.pharm.mssm.edu/Enrichr/enrich'
     query_string = '?userListId=%s&backgroundType=%s'
 
@@ -103,8 +108,8 @@ def _gene_set_analysis(user_list_id, gene_set_library):
         raise Exception('Error fetching enrichment results')
 
     data = json.loads(response.text)
-    
-    enriched_data = pd.DataFrame(data[gene_set_library], 
+
+    enriched_data = pd.DataFrame(data[gene_set_library],
                              columns=['Rank', 'Term', 'p', 'z', 'CombinedScore', 'Genes', 'q', 'old-p', 'old-q'])
     enriched_data.index = enriched_data['Rank']
     enriched_data = enriched_data.drop('Rank', axis=1)

@@ -11,8 +11,6 @@ __all__ = [
     "confidence_ellipse",
 ]
 
-
-
 # Plotting parameters
 plt.rcParams['pdf.fonttype'] = 42
 plt.rcParams['pdf.use14corefonts'] = True

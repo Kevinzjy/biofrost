@@ -2,6 +2,7 @@
 from .alignment import expectation_maximization, run_blastn
 from .bioinfo import get_n50
 from .de import calcNormFactors, calcFactorTMM, calcNormCPM
+from .ontology import clusterProfiler
 
 __all__ = [
     "expectation_maximization",
@@ -11,5 +12,7 @@ __all__ = [
 
     "calcNormFactors",
     "calcFactorTMM",
-    "calcNormCPM"
+    "calcNormCPM",
+
+    "clusterProfiler",
 ]
