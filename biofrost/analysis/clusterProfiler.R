@@ -30,7 +30,7 @@ parser <- add_option(parser, c("--db"), action="store", default='Hg', type='char
 parser <- add_option(parser, c("--type"), action="store", default="SYMBOL", type='character',
                      help=paste(help_info, collapse = '; '))
 parser <- add_option(parser, c("--analysis"), action="store", default='GO', type='character',
-                     help="GO (Gene Ontology); KEGG")
+                     help="GO (Gene Ontology); KEGG; BITR (ID conversion)")
 opt <- parse_args(parser)
 
 # main point of program is here, do this whether or not "verbose" is set
@@ -49,8 +49,9 @@ if (!(opt$db %in% c("Hs", "Mm"))) {
 gene_list <- as.character(read.csv(opt$input, header = FALSE)$V1)
 db = paste(c("org", opt$db, "eg", "db"), collapse=".")
 gene_id <- bitr(gene_list, fromType=opt$type, toType="ENTREZID", OrgDb=db)
-
-if (opt$analysis == "GO") {
+if (opt$analysis == "BITR") {
+    res <- data.frame(gene_id)
+} else if (opt$analysis == "GO") {
     # GO analysis
     bp <- enrichGO(gene_id$ENTREZID, OrgDb = db, ont="BP", keyType = 'ENTREZID')
     mf <- enrichGO(gene_id$ENTREZID, OrgDb = db, ont="MF", keyType = 'ENTREZID')
